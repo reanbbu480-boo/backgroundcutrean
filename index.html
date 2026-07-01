@@ -3,164 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Background Remover Bot</title>
+    <title>No-API Background Remover</title>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
-            text-align: center; 
-            background: #0f172a; 
-            color: #f8fafc;
-            padding: 20px; 
-        }
-        .container { 
-            max-width: 700px; 
-            margin: auto; 
-            background: #1e293b; 
-            padding: 30px; 
-            border-radius: 12px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
-            border: 1px solid #334155;
-        }
-        h2 { margin-top: 0; color: #38bdf8; }
-        input[type="file"] { 
-            margin: 20px 0; 
-            padding: 10px; 
-            background: #0f172a; 
-            border-radius: 6px; 
-            color: #cbd5e1;
-        }
-        .preview { 
-            display: flex; 
-            gap: 20px; 
-            justify-content: center; 
-            flex-wrap: wrap; 
-            margin-top: 20px;
-        }
-        .preview > div { 
-            flex: 1; 
-            min-width: 280px; 
-            background: #0f172a;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-        }
-        img { 
-            max-width: 100%; 
-            margin-top: 10px; 
-            border-radius: 6px; 
-        }
-        /* Checkerboard pattern to show transparency clearly */
-        .checkerboard { 
-            background: repeating-conic-gradient(#334155 0% 25%, #1e293b 0% 50%) 50% / 20px 20px; 
-        }
-        button { 
-            background: #2563eb; 
-            color: white; 
-            border: none; 
-            padding: 12px 24px; 
-            font-size: 16px; 
-            font-weight: bold;
-            border-radius: 6px; 
-            cursor: pointer; 
-            margin-top: 20px;
-            transition: background 0.2s;
-        }
-        button:hover { background: #1d4ed8; }
-        button:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
-        #downloadBtn { background: #10b981; }
-        #downloadBtn:hover { background: #059669; }
-        
-        #loading { 
-            display: none; 
-            margin-top: 20px; 
-            font-weight: bold; 
-            color: #fbbf24; 
-        }
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        .container { max-width: 500px; margin: auto; }
+        img { max-width: 100%; margin-top: 20px; border: 1px dashed #ccc; }
+        button { padding: 10px 15px; margin-top: 10px; cursor: pointer; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.3/dist/browser/imgly_background_removal.js"></script>
 </head>
 <body>
 
-<div class="container">
-    <h2>✨ AI Background Remover Bot</h2>
-    <p>Powered by WebAssembly. Processing happens 100% offline in your browser.</p>
-    
-    <input type="file" id="upload" accept="image/png, image/jpeg, image/webp" />
-    
-    <div class="preview">
-        <div>
-            <h3 style="color: #94a3b8; font-size: 14px;">ORIGINAL</h3>
-            <img id="original" style="display:none;" />
-        </div>
-        <div>
-            <h3 style="color: #94a3b8; font-size: 14px;">RESULT</h3>
-            <img id="result" class="checkerboard" style="display:none;" />
-        </div>
+    <div class="container">
+        <h2>Local Background Remover</h2>
+        <p>This runs entirely in your browser. No API needed!</p>
+        
+        <input type="file" id="imageInput" accept="image/png, image/jpeg">
+        <br>
+        <button onclick="removeBg()">Remove Background</button>
+        
+        <p id="status"></p>
+        
+        <img id="resultImage" style="display: none;" alt="Result will appear here">
     </div>
 
-    <p id="loading">⏳ Processing image... (Downloading AI engine on first run)</p>
+    <script>
+        async function removeBg() {
+            const imageInput = document.getElementById('imageInput');
+            const statusText = document.getElementById('status');
+            const resultImage = document.getElementById('resultImage');
 
-    <button id="processBtn" disabled>Cut Out Background</button>
-    <a id="downloadLink" style="display:none;"><button id="downloadBtn">Save Transparent PNG</button></a>
-</div>
+            if (imageInput.files.length === 0) {
+                alert("Please upload an image first!");
+                return;
+            }
 
-<!-- Load the engine directly from the JS delivery network -->
-<script type="module">
-    import imglyRemoveBackground from 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm';
-
-    const upload = document.getElementById('upload');
-    const originalImg = document.getElementById('original');
-    const resultImg = document.getElementById('result');
-    const processBtn = document.getElementById('processBtn');
-    const downloadLink = document.getElementById('downloadLink');
-    const loading = document.getElementById('loading');
-
-    let currentFile = null;
-
-    // Handle file selection
-    upload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        currentFile = file;
-        const url = URL.createObjectURL(file);
-        
-        // Reset UI for new image
-        originalImg.src = url;
-        originalImg.style.display = 'block';
-        resultImg.style.display = 'none';
-        downloadLink.style.display = 'none';
-        processBtn.disabled = false;
-    });
-
-    // Handle AI processing
-    processBtn.addEventListener('click', async () => {
-        if (!currentFile) return;
-
-        processBtn.disabled = true;
-        loading.style.display = 'block';
-
-        try {
-            // Execute the neural network locally on the file
-            const blob = await imglyRemoveBackground(currentFile);
-            const resultUrl = URL.createObjectURL(blob);
+            const imageFile = imageInput.files[0];
             
-            // Display result
-            resultImg.src = resultUrl;
-            resultImg.style.display = 'block';
+            // Convert the uploaded file to a URL the AI can read
+            const imageUrl = URL.createObjectURL(imageFile);
 
-            // Setup download link
-            downloadLink.href = resultUrl;
-            downloadLink.download = 'cutout_' + currentFile.name.split('.')[0] + '.png';
-            downloadLink.style.display = 'inline-block';
-        } catch (error) {
-            console.error("Bot Error:", error);
-            alert("The AI encountered an error processing this image.");
-        } finally {
-            loading.style.display = 'none';
-            processBtn.disabled = false;
+            statusText.innerText = "Downloading AI model and processing... (This takes a few seconds on the first run)";
+            resultImage.style.display = "none";
+
+            try {
+                // Run the background removal locally
+                const imageBlob = await imglyRemoveBackground(imageUrl);
+                
+                // Display the result
+                const resultUrl = URL.createObjectURL(imageBlob);
+                resultImage.src = resultUrl;
+                resultImage.style.display = "block";
+                statusText.innerText = "Background removed successfully!";
+
+            } catch (error) {
+                console.error(error);
+                statusText.innerText = "Something went wrong. Check the console.";
+            }
         }
-    });
-</script>
+    </script>
 
 </body>
 </html>
